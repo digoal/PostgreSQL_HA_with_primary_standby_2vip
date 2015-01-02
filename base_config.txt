@@ -1,0 +1,56 @@
+基础配置 : 
+
+# 注意配置归档, keep, recovery.conf(restore_command), nfs, mount
+# visudo -f /etc/sudoers 
+# postgres ALL=(ALL) NOPASSWD: /sbin/ifup
+# postgres ALL=(ALL) NOPASSWD: /sbin/ifdown
+# postgres ALL=(ALL) NOPASSWD: /sbin/arping
+# postgres ALL=(ALL) NOPASSWD: /bin/mount
+# postgres ALL=(ALL) NOPASSWD: /bin/umount
+# 注释 #Defaults    requiretty
+# 脚本中用sudo调的命令请使用绝对路径
+
+# fence脚本大部分在cman包中
+# yum install -y cman
+
+# 可能的话, 请使用固定的nfs端口
+
+nfs : 
+# vi /etc/exports
+/opt/arch       192.168.111.42/24(ro,no_root_squash,sync)
+/opt/arch       192.168.111.37/24(ro,no_root_squash,sync)
+
+# chkconfig nfs on
+# service nfs start
+
+peer 归档DIR : 
+# mkdir /opt/peer_arch
+
+postgresql.conf
+数据库归档命令 : 
+archive_command = 'DIR=/opt/arch/`date +%F`; test ! -d $DIR && mkdir -p $DIR && chmod 755 $DIR; test ! -f $DIR/%f && cp %p $DIR/%f; chmod 755 $DIR/%f'
+
+
+recovery.conf
+恢复命令 : 
+restore_command = 'PEER_DIR=/opt/peer_arch; cp $PEER_DIR/*/%f %p'
+recovery_target_timeline = 'latest'
+standby_mode = on
+primary_conninfo = 'host=192.168.111.130 port=1921 user=replica keepalives_idle=60'
+
+
+密码文件 : 
+# su - postgres
+$ vi ~/.pgpass
+192.168.173.130:1921:replication:replica:replica
+192.168.173.130:1921:*:sky_pg_cluster:SKY_PG_cluster_321
+192.168.173.131:1921:*:sky_pg_cluster:SKY_PG_cluster_321
+127.0.0.1:1921:*:sky_pg_cluster:SKY_PG_cluster_321
+
+$ chmod 400 ~/.pgpass
+
+# fence命令在sky_pg_cluster.sh fence函数中, 不同的主机, fence需要修改sky_pg_cluster.sh进行定制
+  # 无限fence, 加参数 force, 加其他参数不强制fence
+  # ipmitool -I lanplus -L OPERATOR -H $IP -U $USER -P $PWD power reset
+  # fence_rsa -a $IP -l $USER -p $PWD -o reboot
+  # fence_ilo -a $IP -l $USER -p $PWD -o reboot
