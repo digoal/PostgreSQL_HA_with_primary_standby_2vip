@@ -17,6 +17,67 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
 
 虚拟IP和角色的关系固定, 不会变化, 例如192.168.111.130对应primary角色, 那么不管怎么切换, 他们始终在一起(谁是primary, 谁就会启动192.168.111.130).
 
+数据库角色转变和心跳原理 : 
+1. 根据文件recovery.conf是否存在检测本地节点角色
+    存在(standby), 不存在(master)
+2. 加载NFS对端归档目录
+3. 启动数据库
+    如果是standby
+      备份上一个控制文件副本
+      备份当前控制文件
+      启动数据库
+    如果是master
+      启动数据库
+4. 启动VIP
+    如果是standby
+      启动vips
+    如果是master
+      如果vipm已被其他节点启动
+        降级为standby
+        启动vips
+      如果vipm没有被其他节点启动
+        启动vipm
+5. 触发第一次心跳
+6. 循环心跳检测
+
+不同的角色, 循环逻辑不同:
+
+master角色, 循环检查
+1. 网关检查, 反映本地网络状况
+2. 本地心跳检查, 反映本地数据库健康状态
+3. 本地角色对应IP检查
+4. 检查VIPS,PORT,数据库心跳
+如果本地健康,对端不健康
+触发切换
+1. 主节点fence standby
+2. 主节点接管VIPS
+3. 主节点转换master_standby角色
+
+standby角色, 循环检查
+1. 网关检查, 反映本地网络状况
+2. 本地心跳检查, 反映本地数据库健康状态
+3. 本地角色对应IP检查
+4. 检查备延迟, 判断是否允许promote
+5. 检查VIPM,PORT,数据库心跳
+如果本地健康,对端不健康
+触发切换
+1. 备节点fence master
+2. 备节点停库
+3. 备节点备份控制文件
+4. 备节点注释restore_command
+5. 备节点启动数据库
+6. 备节点激活数据库
+7. 备节点接管VIPM
+8. 备节点转换master_standby角色
+
+master_standby角色, 循环检查
+1. 检查对端数据库监听是否启动
+如果对端数据库已启动
+触发释放vips
+1. 释放vips
+2. 转换为master角色
+
+
 # Author : Digoal zhou
 # Email : digoal@126.com
 # Blog : http://blog.163.com/digoal@126/

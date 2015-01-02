@@ -370,6 +370,7 @@ start() {
 # 根据角色, 进入初始化流程
 
 # 加载peer归档文件
+# 如果对端节点未启动, 会卡在这里
 sudo $S_MOUNT -t nfs -o tcp $PEER_IP:$LOCAL_ARCH_DIR $PEER_ARCH_DIR
 
 echo "`date +%F%T` this is $LOCAL_ROLE"
@@ -499,7 +500,49 @@ for ((m=1;m>0;m=1))
 do
   echo "`date +%F%T` this is $LOCAL_ROLE"
   sleep 1
-  # 任意角色, 本地状态检查
+
+  # m_s和standby,master不一样的地方, 不需要依赖本地健康状态, 务必在必要时释放vips.
+  if [ $LOCAL_ROLE == "m_s" ]; then
+    # 如果本地不健康, 写日志, 邮件, nagios告警 
+    # 网关检查, 反映本地网络状况, 不影响释放vips, 只做日志输出
+    ipscan $VIP_IF $GATEWAY_IP
+    if [ $? -ne 0 ]; then
+      echo "`date +%F%T` can not connect to gateway."
+    fi
+
+    # 本地心跳检查, 反映本地数据库健康状态, 不影响释放vips, 只做日志输出
+    keepalive $LOCAL_IP
+    if [ $? -ne 0 ]; then
+      echo "`date +%F%T` local database not health."
+    fi
+
+    # 本地角色对应IP检查, 不影响释放vips, 只做日志输出
+    ipaddrscan $VIP_IF $VIPM_IP
+    if [ $? -ne 0 ]; then
+      echo "`date +%F%T` vipm not up."
+    fi
+    ipaddrscan $VIP_IF $VIPS_IP
+    if [ $? -ne 0 ]; then
+      echo "`date +%F%T` vips not up."
+    fi
+
+    # 检测对端IP数据库监听是否已启动, 如果已启动, 释放vips
+    echo "`date +%F%T` detecting postgresql listener on peer host."
+    port_probe $PEER_IP $PGPORT
+    if [ $? -eq 0 ]; then
+      # 释放vips
+      echo "`date +%F%T` release vips."
+      sudo $S_IFDOWN $VIPS_IF
+
+      # 等待120秒, 转换为master
+      echo "`date +%F%T` sleeping 120 second."
+      sleep 120
+      # 转变角色
+      LOCAL_ROLE="master"
+    fi
+  fi
+
+  # standby, master角色, 本地状态检查
   # 如果本地不健康, 写日志, 邮件, nagios告警, continue不进行后续peer节点检查.
   # 通常需人工处理本地状态异常.
 
@@ -584,35 +627,6 @@ do
     fi
   fi
   
-  if [ $LOCAL_ROLE == "m_s" ]; then
-    # 如果本地不健康, 写日志, 邮件, nagios告警, continue不进行后续检查.
-    # 本地角色对应IP检查
-    ipaddrscan $VIP_IF $VIPM_IP
-    if [ $? -ne 0 ]; then
-      echo "`date +%F%T` vipm not up."
-      continue
-    fi
-    ipaddrscan $VIP_IF $VIPS_IP
-    if [ $? -ne 0 ]; then
-      echo "`date +%F%T` vips not up."
-      continue
-    fi
-
-    # 检测对端IP数据库监听是否已启动, 如果已启动, 释放vips
-    echo "`date +%F%T` detecting postgresql listener on peer host."
-    port_probe $PEER_IP $PGPORT
-    if [ $? -eq 0 ]; then
-      # 释放vips
-      echo "`date +%F%T` release vips."
-      sudo $S_IFDOWN $VIPS_IF
-      
-      # 等待120秒, 转换为master
-      echo "`date +%F%T` sleeping 120 second."
-      sleep 120
-      # 转变角色
-      LOCAL_ROLE="master"
-    fi
-  fi
 done
 }
 
