@@ -121,6 +121,20 @@ master_standby角色, 循环检查
 
 2. 转换为master角色
 
+图片
+
+架构
+![架构](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_1.png)
+
+主角
+![主角](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_2.png)
+
+备角
+![备角](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_3.png)
+
+主备合一角
+![主备合一](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_4.png)
+
 # Author : Digoal zhou
 # Email : digoal@126.com
 # Blog : http://blog.163.com/digoal@126/
