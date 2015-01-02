@@ -383,22 +383,34 @@ if [ $LOCAL_ROLE == "standby" ]; then
   cp $PGDATA/global/pg_control $LOCAL_ARCH_DIR/pg_control.s
   chmod 755 $LOCAL_ARCH_DIR/pg_control.s
   
-  # 启动数据库
-  pg_ctl start -w -t 60000
+  # 判断数据库是否已启动
+  port_probe $LOCAL_IP $PGPORT
   if [ $? -ne 0 ]; then
-    # 数据库启动不成功, 退出脚本
-    echo "startup standby db failed."
-    exit 1
+    # 启动数据库
+    pg_ctl start -w -t 60000
+    if [ $? -ne 0 ]; then
+      # 数据库启动不成功, 退出脚本
+      echo "startup standby db failed."
+      exit 1
+    fi
+  else
+    echo "database is already startup."
   fi
 fi
 
 if [ $LOCAL_ROLE == "master" ]; then
-  # -> 启动数据库
-  pg_ctl start -w -t 60000
+  # 判断数据库是否已启动
+  port_probe $LOCAL_IP $PGPORT
   if [ $? -ne 0 ]; then
-    # 数据库启动不成功, 退出脚本
-    echo "startup master db failed."
-    exit 1
+    # -> 启动数据库
+    pg_ctl start -w -t 60000
+    if [ $? -ne 0 ]; then
+      # 数据库启动不成功, 退出脚本
+      echo "startup master db failed."
+      exit 1
+    fi
+  else
+    echo "database is already startup."
   fi
 fi
 
