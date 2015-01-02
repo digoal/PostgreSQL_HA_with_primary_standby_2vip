@@ -16,8 +16,9 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
   正常情况下两台主机分别承担primary和standby角色, 分别启动一个虚拟IP.
 
 应用程序连接虚拟IP, 其中一个虚拟IP对应的是primary, 另一个虚拟IP对应的是standby. 
-
 虚拟IP和角色的关系固定, 不会变化, 例如192.168.111.130对应primary角色, 那么不管怎么切换, 他们始终在一起(谁是primary, 谁就会启动192.168.111.130).
+
+=======================================
 
 数据库角色转变和心跳原理 : 
 
@@ -28,43 +29,32 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
 2. 加载NFS对端归档目录
 
 3. 启动数据库
-
     如果是standby
-
       备份上一个控制文件副本
-
       备份当前控制文件
-
       启动数据库
-
     如果是master
-
       启动数据库
 
 4. 启动VIP
-
     如果是standby
-
       启动vips
-
     如果是master
-
       如果vipm已被其他节点启动
-
         降级为standby
-
         启动vips
-
       如果vipm没有被其他节点启动
-
         启动vipm
 
 5. 触发第一次心跳
 
 6. 循环心跳检测
 
+=======================================
+
 不同的角色, 循环逻辑不同:
 
+=======================================
 master角色, 循环检查
 
 1. 网关检查, 反映本地网络状况
@@ -85,7 +75,7 @@ master角色, 循环检查
 
 3. 主节点转换master_standby角色
 
-
+=======================================
 standby角色, 循环检查
 
 1. 网关检查, 反映本地网络状况
@@ -118,7 +108,7 @@ standby角色, 循环检查
 
 8. 备节点转换master_standby角色
 
-
+=======================================
 master_standby角色, 循环检查
 
 1. 检查对端数据库监听是否启动
