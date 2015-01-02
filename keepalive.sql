@@ -86,3 +86,9 @@ end;
 $$ language plpgsql strict;
 -- 在创建测试函数后, 最好测试一下是否正常, 因为某些版本的系统表可能不通用, 需要调整.
 -- 9.2和9.3是没有问题的.
+
+
+
+# Author : Digoal zhou
+# Email : digoal@126.com
+# Blog : http://blog.163.com/digoal@126/

@@ -3,22 +3,6 @@
 # 需要调试时, 取消set -x注释
 # set -x
 
-
-# 注意配置归档, keep, recovery.conf(restore_command), nfs, mount
-# sudoer 
-# postgres ALL=(ALL) NOPASSWD: /sbin/ifup
-# postgres ALL=(ALL) NOPASSWD: /sbin/ifdown
-# postgres ALL=(ALL) NOPASSWD: /sbin/arping
-# postgres ALL=(ALL) NOPASSWD: /bin/mount
-# postgres ALL=(ALL) NOPASSWD: /bin/umount
-# 注释 #Defaults    requiretty
-# 脚本中用sudo调的命令请使用绝对路径
-
-# fence脚本大部分在cman包中
-# yum install -y cman
-
-# 可能的话, 请使用固定的nfs端口
-
 . /etc/profile
 . /home/postgres/.bash_profile
 
@@ -143,7 +127,6 @@ fence() {
     echo "`date +%F%T` force fenceing, waiting..."
     for ((m=1;m>0;m++))
     do
-      # ipmitool -I lanplus -L OPERATOR -H $IP -U $USER -P $PWD power reset
       $EXCMD
       if [ $? -eq 0 ]; then
         break
@@ -152,7 +135,6 @@ fence() {
       fi
     done
   else
-    # ipmitool -I lanplus -L OPERATOR -H $IP -U $USER -P $PWD power reset
     echo "`date +%F%T` normal fenceing, waiting..."
     $EXCMD
     # 返回fence成功与否
@@ -674,3 +656,7 @@ esac
 
 exit $RETVAL
 
+
+# Author : Digoal zhou
+# Email : digoal@126.com
+# Blog : http://blog.163.com/digoal@126/

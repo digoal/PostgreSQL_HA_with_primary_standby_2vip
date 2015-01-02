@@ -17,4 +17,6 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
 
 虚拟IP和角色的关系固定, 不会变化, 例如192.168.111.130对应primary角色, 那么不管怎么切换, 他们始终在一起(谁是primary, 谁就会启动192.168.111.130).
 
-http://blog.163.com/digoal@126
+# Author : Digoal zhou
+# Email : digoal@126.com
+# Blog : http://blog.163.com/digoal@126/

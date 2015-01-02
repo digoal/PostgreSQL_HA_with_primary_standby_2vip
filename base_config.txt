@@ -54,3 +54,8 @@ $ chmod 400 ~/.pgpass
   # ipmitool -I lanplus -L OPERATOR -H $IP -U $USER -P $PWD power reset
   # fence_rsa -a $IP -l $USER -p $PWD -o reboot
   # fence_ilo -a $IP -l $USER -p $PWD -o reboot
+
+
+# Author : Digoal zhou
+# Email : digoal@126.com
+# Blog : http://blog.163.com/digoal@126/
