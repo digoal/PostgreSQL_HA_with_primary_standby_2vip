@@ -371,7 +371,7 @@ start() {
 
 # 避免standby激活的时间超过服务器启动时间, 设置一个初始化延迟
 echo "`date +%F%T` sleep, waiting other host promoting..."
-sleep 120
+sleep 45
 
 # 加载peer归档文件
 # 如果对端节点未启动, 会卡在这里
@@ -574,9 +574,9 @@ do
     fi
 
     # 检查主备延迟, 判断是否适合激活数据库
-    # 假设延迟判断, 120秒以及80MB
+    # 假设延迟判断, 600秒以及16MB
     # 注意这个延迟时间必须大于checkmaster的超时时间.
-    enable_promote 120 81920000
+    enable_promote 600 16000000
     if [ $? -ne 0 ]; then
       echo "`date +%F%T` can not promote."
       continue
@@ -585,7 +585,7 @@ do
     # 异常超过5次, 触发切换, 角色转变
     checkmaster 5
     if [ $? -ne 0 ]; then
-      fence $FENCE_IP $FENCE_USER $FENCE_PWD normal
+      fence $FENCE_IP $FENCE_USER $FENCE_PWD force
       RET=$?
       # fence成功, 备份旧控制文件到指定目录, 激活, 启动vipm, 并转换角色.
       if [ $RET -eq 0 ]; then
