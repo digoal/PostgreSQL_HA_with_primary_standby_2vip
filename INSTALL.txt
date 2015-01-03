@@ -226,13 +226,14 @@ port = 1921                             # (change requires restart)
 tcp_keepalives_idle = 60                # TCP_KEEPIDLE, in seconds;
 tcp_keepalives_interval = 10            # TCP_KEEPINTVL, in seconds;
 tcp_keepalives_count = 10               # TCP_KEEPCNT;
+wal_level = hot_standby
 archive_command = 'DIR=/opt/arch/`date +%F`; test ! -d $DIR && mkdir -p $DIR; chmod 755 $DIR; test ! -f $DIR/%f && cp %p $DIR/%f; chmod 755 $DIR/%f'                # command to use to archive a logfile segment
 max_wal_senders = 10            # max number of walsender processes
 hot_standby = on                        # "on" allows queries during recovery
 wal_receiver_status_interval = 1s       # send replies at least this often
 hot_standby_feedback = on               # send info from standby to prevent
 
-
+模板
 cd $PGDATA
 vi postgresql.conf
 listen_addresses = '0.0.0.0'            # what IP address(es) to listen on;
