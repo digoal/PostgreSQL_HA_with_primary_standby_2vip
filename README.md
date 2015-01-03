@@ -125,6 +125,7 @@ master_standby角色, 循环检查
 
 架构
 ![架构](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_1.png)
+![架构](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_arch.png)
 
 主角
 ![主角](https://github.com/digoal/PostgreSQL_HA_with_primary_standby_2vip/raw/master/m_s_ha_2.png)
