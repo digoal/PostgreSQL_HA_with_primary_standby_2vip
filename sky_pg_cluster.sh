@@ -369,6 +369,10 @@ start() {
 # 初始化.............................................................................
 # 根据角色, 进入初始化流程
 
+# 避免standby激活的时间超过服务器启动时间, 设置一个初始化延迟
+echo "`date +%F%T` sleep, waiting other host promoting..."
+sleep 120
+
 # 加载peer归档文件
 # 如果对端节点未启动, 会卡在这里
 sudo $S_MOUNT -t nfs -o tcp $PEER_IP:$LOCAL_ARCH_DIR $PEER_ARCH_DIR
