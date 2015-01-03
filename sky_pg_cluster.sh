@@ -164,9 +164,6 @@ promote() {
   pg_ctl promote
   # PostgreSQL 9.0 不能使用pg_ctl promote
   # touch $TRIG_FILE
-
-  # 还原修改recovery.done, 取消注释restore_command
-  sed -i -e 's/^#digoal_restore_command/restore_command/' $PGDATA/recovery.conf
   
   # 等待激活成功后返回
   SQL="set client_min_messages=warning; select 'this_is_primary' as res where not pg_is_in_recovery();"
@@ -176,6 +173,9 @@ promote() {
     LAG=`echo $SQL | psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -f - | grep -c this_is_primary`
     if [ $LAG -eq 1 ]; then
       echo "`date +%F%T` promote success."
+      # 还原修改recovery.done, 取消注释restore_command
+      sed -i -e 's/^#digoal_restore_command/restore_command/' $PGDATA/recovery.done
+      
       # 创建检查点, 切换xlog
       psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "checkpoint"
       psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_switch_xlog()"
