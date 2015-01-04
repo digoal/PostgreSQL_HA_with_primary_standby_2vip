@@ -154,7 +154,28 @@ postgres ALL=(ALL) NOPASSWD: /sbin/arping
 postgres ALL=(ALL) NOPASSWD: /bin/mount
 postgres ALL=(ALL) NOPASSWD: /bin/umount
 
-PostgreSQL 安装 : (HOST1, HOST2)
+配置postgres用户的ssh无密钥认证 (HOST1, HOST2)
+# vi /etc/ssh/sshd_config
+PubkeyAuthentication yes
+
+# service sshd restart
+
+# su - postgres
+$ ssh-keygen -t rsa
+不要输入passphrase
+$ cd ~/.ssh
+$ 将 id_rsa.pub 内容拷贝到对方主机的postgres用户下的 ~/.ssh/authorized_keys
+$ chmod 600 ~/.ssh/authorized_keys
+
+# 验证无密码配置是否正确
+ssh 192.168.111.42 date
+Sun Jan  4 15:54:26 CST 2015
+
+ssh 192.168.111.37 date
+Sun Jan  4 15:54:26 CST 2015
+
+
+# PostgreSQL 安装 : (HOST1, HOST2)
 vi /home/postgres/.bash_profile
 # add by digoal
 export PS1="$USER@`/bin/hostname -s`-> "
@@ -217,6 +238,7 @@ host    replication     replica        192.168.111.37/32                md5
 host    replication     replica        192.168.111.42/32                md5 
 host    sky_pg_cluster     sky_pg_cluster        192.168.111.37/32                md5 
 host    sky_pg_cluster     sky_pg_cluster        192.168.111.42/32                md5 
+# 其他
 host all all 0.0.0.0/0 md5
 
 配置归档, hot_standby, sender
@@ -279,7 +301,7 @@ lc_numeric = 'C'                        # locale for number formatting
 lc_time = 'C'                           # locale for time formatting
 default_text_search_config = 'pg_catalog.english'
 
-配置恢复文件 : 
+配置恢复文件, primary_conninfo中使用vipm连接  : 
 $ cp /opt/pgsql/share/recovery.conf.sample $PGDATA/recovery.done
 $ chmod 700 $PGDATA/recovery.done
 $ vi $PGDATA/recovery.done
