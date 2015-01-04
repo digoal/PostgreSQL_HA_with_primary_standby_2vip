@@ -146,25 +146,19 @@ fence() {
 
 # 将备数据库激活为主库
 promote() {
-  # 停库
-  pg_ctl stop -m fast -w -t 60000
-
-  # 备份pg_root, 不包含表空间(建议表空间 不要 建立在$PGDATA目录下, 否则这里会非常巨大)
-  mv $LOCAL_ARCH_DIR/pg_root.s $LOCAL_ARCH_DIR/pg_root.s.`date +%F%T`
-  cp -rP $PGDATA $LOCAL_ARCH_DIR/pg_root.s
-  chmod -R 755 $LOCAL_ARCH_DIR/pg_root.s
-  
   # 修改recovery.conf, 注释restore_command
   sed -i -e 's/^restore_command/#digoal_restore_command/' $PGDATA/recovery.conf
+  # 停库
+  pg_ctl stop -m fast -w -t 60000
   # 启动数据库
   pg_ctl start -w -t 60000
-  
+
   # 开始 promote
   echo "`date +%F%T` promoting database ..."
   pg_ctl promote
   # PostgreSQL 9.0 不能使用pg_ctl promote
   # touch $TRIG_FILE
-  
+
   # 等待激活成功后返回
   SQL="set client_min_messages=warning; select 'this_is_primary' as res where not pg_is_in_recovery();"
   for ((m=1;m>0;m++))
@@ -182,12 +176,35 @@ promote() {
       psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "checkpoint"
       psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_switch_xlog()"
       psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "checkpoint"
-      return 0
+      # 退出循环
+      break
     else
       echo "`date +%F%T` promoting..."
       sleep 1
     fi
   done
+
+  # 备份数据库pg_root
+  for ((m=1;m>0;m++))
+  do
+    # 备份开始
+    psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_start_backup(now()::text)"
+    if [ $? -eq 0 ]; then
+      # 备份pg_root, 不包含表空间(建议表空间 不要 建立在$PGDATA目录下, 否则这里会非常巨大)
+      mv $LOCAL_ARCH_DIR/pg_root.s $LOCAL_ARCH_DIR/pg_root.s.`date +%F%T`
+      cp -rP $PGDATA $LOCAL_ARCH_DIR/pg_root.s
+      chmod -R 755 $LOCAL_ARCH_DIR/pg_root.s
+      break
+    else
+      sleep 1
+      continue
+    fi
+  done
+  
+  # 备份结束
+  psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_stop_backup()"
+  
+  return 0
 }
 
 # 主库降级成备库
@@ -204,6 +221,7 @@ degrade() {
   # 拷贝对端pg_root, 覆盖当前pg_root
   rm -rf $PGDATA/*
   cp -rP $PEER_ARCH_DIR/pg_root.s/* $PGDATA/
+  mv $PGDATA/recovery.done $PGDATA/recovery.conf
   chmod -R 700 $PGDATA/*
 
   pg_ctl start -w -t 60000
@@ -273,17 +291,6 @@ checkmaster() {
     elif [ $RET -ne 0 ]; then
       continue
     fi
-
-    # 检查主数据库心跳
-    keepalive $VIPM_IP
-    RET=$?
-    if [ $m -ge $TIMEOUT ] && [ $RET -ne 0 ]; then
-      echo "$FUNCNAME keepalive timeout: $TIMEOUT"
-      return 1
-    # 数据库心跳异常, 但是未超时继续检测
-    elif [ $RET -ne 0 ]; then
-      continue
-    fi
     
     # 全部正常, 退出循环
     break
@@ -323,17 +330,6 @@ checkstandby() {
       echo "$FUNCNAME port_probe timeout: $TIMEOUT"
       return 1
     # 数据库监听异常, 但是未超时, 继续检测
-    elif [ $RET -ne 0 ]; then
-      continue
-    fi
-
-    # 检查备库心跳, keepalive务必支持standby 模式.
-    keepalive $VIPS_IP
-    RET=$?
-    if [ $m -ge $TIMEOUT ] && [ $RET -ne 0 ]; then
-      echo "$FUNCNAME keepalive timeout: $TIMEOUT"
-      return 1
-    # 数据库心跳异常, 但是未超时继续检测
     elif [ $RET -ne 0 ]; then
       continue
     fi
@@ -398,12 +394,18 @@ if [ $LOCAL_ROLE == "master" ]; then
   # 判断数据库是否已启动
   port_probe $LOCAL_IP $PGPORT
   if [ $? -ne 0 ]; then
-    # -> 启动数据库
-    pg_ctl start -w -t 60000
+    # 判断VIPM是否已被其他节点启动, 表明本地节点应该degrade, 所以不需要启动数据库
+    ipscan $VIP_IF $VIPM_IP
     if [ $? -ne 0 ]; then
-      # 数据库启动不成功, 退出脚本
-      echo "startup master db failed."
-      exit 1
+      # -> 启动数据库
+      pg_ctl start -w -t 60000
+      if [ $? -ne 0 ]; then
+        # 数据库启动不成功, 退出脚本
+        echo "startup master db failed."
+        exit 1
+      fi
+    else
+      echo "Other host already startup vipm, this node should degrade to standby."
     fi
   else
     echo "database is already startup."
@@ -505,10 +507,14 @@ do
       echo "`date +%F%T` can not connect to gateway."
     fi
 
-    # 本地心跳检查, 反映本地数据库健康状态, 不影响释放vips, 只做日志输出
+    # 本地心跳检查, 反映本地数据库健康状态, 不健康则退出本脚本
     keepalive $LOCAL_IP
     if [ $? -ne 0 ]; then
-      echo "`date +%F%T` local database not health."
+      echo "`date +%F%T` local database not health, release vipm and vips. exit this script."
+      # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方升级为primary
+      sudo $S_IFDOWN $VIPM_IF
+      sudo $S_IFDOWN $VIPS_IF
+      exit 1
     fi
 
     # 本地角色对应IP检查, 不影响释放vips, 只做日志输出
@@ -548,11 +554,14 @@ do
     continue
   fi
 
-  # 本地心跳检查, 反映本地数据库健康状态
+  # 本地心跳检查, 反映本地数据库健康状态, 不健康则退出本脚本.
   keepalive $LOCAL_IP
   if [ $? -ne 0 ]; then
     echo "`date +%F%T` local database not health."
-    continue
+    # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方处理, 例如升级为primary或m_s
+    sudo $S_IFDOWN $VIPM_IF
+    sudo $S_IFDOWN $VIPS_IF
+    exit 1
   fi
 
   if [ $LOCAL_ROLE == "standby" ]; then    
@@ -582,7 +591,8 @@ do
       RET=$?
       # fence成功, 备份旧控制文件到指定目录, 激活, 启动vipm, 并转换角色.
       if [ $RET -eq 0 ]; then
-        promote
+        # 务必在启动VIPM前promote.
+	promote
         ifup_vip $VIPM_IF
         LOCAL_ROLE="m_s"
       else
