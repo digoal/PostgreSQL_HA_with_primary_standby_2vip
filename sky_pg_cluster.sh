@@ -57,7 +57,7 @@ S_MOUNT="`which mount`"
 S_UMOUNT="`which umount`"
 
 # 依赖命令
-DEP_CMD="sudo ifup ifdown arping mount umount port_probe pg_ctl psql ipmitool"
+DEP_CMD="sudo ifup ifdown arping mount umount port_probe pg_ctl psql ipmitool rsync fence_ilo"
 
 # 9.0 使用触发器文件
 # TRIG_FILE='/data01/pgdata/pg_root/.1921.trigger'
@@ -183,26 +183,6 @@ promote() {
       sleep 1
     fi
   done
-
-  # 备份数据库pg_root
-  for ((m=1;m>0;m++))
-  do
-    # 备份开始
-    psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_start_backup(now()::text)"
-    if [ $? -eq 0 ]; then
-      # 备份pg_root, 不包含表空间(建议表空间 不要 建立在$PGDATA目录下, 否则这里会非常巨大)
-      mv $LOCAL_ARCH_DIR/pg_root.s $LOCAL_ARCH_DIR/pg_root.s.`date +%F%T`
-      cp -rP $PGDATA $LOCAL_ARCH_DIR/pg_root.s
-      chmod -R 755 $LOCAL_ARCH_DIR/pg_root.s
-      break
-    else
-      sleep 1
-      continue
-    fi
-  done
-  
-  # 备份结束
-  psql -h $LOCAL_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_stop_backup()"
   
   return 0
 }
@@ -211,18 +191,39 @@ promote() {
 degrade() {
   DATE=`date +%F%T`
   
-  # 停库,备份控制文件,拷贝对端控制文件,重命名recovery.done,启动数据库
+  # 停库, rsync pg_root以及表空间,重命名recovery.done,启动数据库
+  # 需要打通主备数据库的postgres用户ssh认证
   echo "`date +%F%T` degrading database ..."
   pg_ctl stop -m fast -w -t 60000
   
-  # 备份pg_root, 不包含表空间(建议表空间 不要 建立在$PGDATA目录下, 否则这里会非常巨大)
-  cp -rP $PGDATA $LOCAL_ARCH_DIR/pg_root.m.$DATE
+  # 备份数据库pg_root
+  for ((m=1;m>0;m++))
+  do
+    # 开启pg_start_backup
+    psql -h $VIPM_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_start_backup(now()::text)"
+    if [ $? -eq 0 ]; then
+      # 开始rsync
+      rsync -a --delete --delete-before $PEER_IP:$PGDATA/ $PGDATA/
+      chown -R postgres:postgres $PGDATA
+      chmod -R 700 $PGDATA
+      for file in `ls $PGDATA/pg_tblspc`
+      do
+        rsync -a --delete --delete-before $PEER_IP:$PGDATA/pg_tblspc/$file/ $PGDATA/pg_tblspc/$file/
+	chown -R postgres:postgres $PGDATA/pg_tblspc/$file/*
+	chmod -R 700 $PGDATA/pg_tblspc/$file/*
+      done
+      break
+    else
+      sleep 1
+      continue
+    fi
+  done
+
+  # rsync结束
+  psql -h $VIPM_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_stop_backup()"
   
-  # 拷贝对端pg_root, 覆盖当前pg_root
-  rm -rf $PGDATA/*
-  cp -rP $PEER_ARCH_DIR/pg_root.s/* $PGDATA/
+  # 重命名recovery.done
   mv $PGDATA/recovery.done $PGDATA/recovery.conf
-  chmod -R 700 $PGDATA/*
 
   pg_ctl start -w -t 60000
   # 返回数据库是否启动成功
@@ -394,7 +395,8 @@ if [ $LOCAL_ROLE == "master" ]; then
   # 判断数据库是否已启动
   port_probe $LOCAL_IP $PGPORT
   if [ $? -ne 0 ]; then
-    # 判断VIPM是否已被其他节点启动, 表明本地节点应该degrade, 所以不需要启动数据库
+    # 判断VIPM是否已被其他节点启动, 
+    # 如果VIPM已被其他节点启动表明本地节点应该degrade, 所以不需要启动数据库
     ipscan $VIP_IF $VIPM_IP
     if [ $? -ne 0 ]; then
       # -> 启动数据库
@@ -535,15 +537,12 @@ do
       echo "`date +%F%T` release vips."
       sudo $S_IFDOWN $VIPS_IF
 
-      # 等待对方完成degrade, 300秒, 转换为master
-      echo "`date +%F%T` sleeping 120 second."
-      sleep 300
       # 转变角色
       LOCAL_ROLE="master"
     fi
   fi
 
-  # standby, master角色, 本地状态检查
+  # ============  standby, master角色, 本地状态检查   ====================
   # 如果本地不健康, 写日志, 邮件, nagios告警, continue不进行后续peer节点检查.
   # 通常需人工处理本地状态异常.
 
@@ -564,7 +563,7 @@ do
     exit 1
   fi
 
-  if [ $LOCAL_ROLE == "standby" ]; then    
+  if [ $LOCAL_ROLE == "standby" ]; then
     # 如果本地不健康, 写日志, 邮件, nagios告警, continue不进行后续检查.
     # 本地角色对应IP检查
     ipaddrscan $VIP_IF $VIPS_IP
@@ -574,9 +573,9 @@ do
     fi
 
     # 检查主备延迟, 判断是否适合激活数据库
-    # 假设延迟判断, 600秒以及16MB
+    # 假设延迟判断, 100秒以及32MB
     # 注意这个延迟时间必须大于checkmaster的超时时间.
-    enable_promote 600 16000000
+    enable_promote 100 32000000
     if [ $? -ne 0 ]; then
       echo "`date +%F%T` can not promote."
       # 可能是对端正在等待造成, 主动发起心跳, 不管结果
@@ -589,7 +588,7 @@ do
     if [ $? -ne 0 ]; then
       fence $FENCE_IP $FENCE_USER $FENCE_PWD force
       RET=$?
-      # fence成功, 备份旧控制文件到指定目录, 激活, 启动vipm, 并转换角色.
+      # fence成功, 激活, 启动vipm, 并转换角色.
       if [ $RET -eq 0 ]; then
         # 务必在启动VIPM前promote.
 	promote
