@@ -15,8 +15,9 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
 
   正常情况下两台主机分别承担primary和standby角色, 分别启动一个虚拟IP.
 
-应用程序连接虚拟IP, 其中一个虚拟IP对应的是primary, 另一个虚拟IP对应的是standby. 
-虚拟IP和角色的关系固定, 不会变化, 例如192.168.111.130对应primary角色, 那么不管怎么切换, 他们始终在一起(谁是primary, 谁就会启动192.168.111.130).
+  应用程序连接虚拟IP, 其中一个虚拟IP对应的是primary, 另一个虚拟IP对应的是standby. 
+  
+  虚拟IP和角色的关系固定, 不会变化, 例如192.168.111.130对应primary角色, 那么不管怎么切换, 他们始终在一起(谁是primary,谁就会启动192.168.111.130).
 
 =======================================
 
@@ -30,11 +31,9 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
 
 3. 启动数据库
     如果是standby
-      备份上一个控制文件副本
-      备份当前控制文件
       启动数据库
     如果是master
-      启动数据库
+      如果其他主机未启动VIPM, 启动数据库
 
 4. 启动VIP
     如果是standby
@@ -96,17 +95,15 @@ standby角色, 循环检查
 
     2. 备节点停库
 
-    3. 备节点备份控制文件
+    3. 备节点注释restore_command
 
-    4. 备节点注释restore_command
+    4. 备节点启动数据库
 
-    5. 备节点启动数据库
+    5. 备节点激活数据库, 修改restore_command
 
-    6. 备节点激活数据库
+    6. 备节点接管VIPM
 
-    7. 备节点接管VIPM
-
-    8. 备节点转换master_standby角色
+    7. 备节点转换master_standby角色
 
 =======================================
 master_standby角色, 循环检查
