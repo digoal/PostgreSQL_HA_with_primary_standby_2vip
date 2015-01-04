@@ -146,13 +146,13 @@ fence() {
 
 # 将备数据库激活为主库
 promote() {
-  # 备份standby控制文件
-  mv $LOCAL_ARCH_DIR/pg_control.s $LOCAL_ARCH_DIR/pg_control.s.`date +%F%T`
-  cp $PGDATA/global/pg_control $LOCAL_ARCH_DIR/pg_control.s
-  chmod 755 $LOCAL_ARCH_DIR/pg_control.s
-  
   # 停库
   pg_ctl stop -m fast -w -t 60000
+
+  # 备份pg_root, 不包含表空间(建议表空间 不要 建立在$PGDATA目录下, 否则这里会非常巨大)
+  mv $LOCAL_ARCH_DIR/pg_root.s $LOCAL_ARCH_DIR/pg_root.s.`date +%F%T`
+  cp -rP $PGDATA $LOCAL_ARCH_DIR/pg_root.s
+  chmod -R 755 $LOCAL_ARCH_DIR/pg_root.s
   
   # 修改recovery.conf, 注释restore_command
   sed -i -e 's/^restore_command/#digoal_restore_command/' $PGDATA/recovery.conf
@@ -198,18 +198,13 @@ degrade() {
   echo "`date +%F%T` degrading database ..."
   pg_ctl stop -m fast -w -t 60000
   
-  # 备份控制文件
-  cp $PGDATA/global/pg_control $LOCAL_ARCH_DIR/pg_control.m.$DATE
+  # 备份pg_root, 不包含表空间(建议表空间 不要 建立在$PGDATA目录下, 否则这里会非常巨大)
+  cp -rP $PGDATA $LOCAL_ARCH_DIR/pg_root.m.$DATE
   
-  # 拷贝对端控制文件覆盖现有控制文件
-  cp $PEER_ARCH_DIR/pg_control.s $PGDATA/global/pg_control
-  chmod 700 $PGDATA/global/pg_control
-  mv $PGDATA/recovery.done $PGDATA/recovery.conf
-  
-  # 清除本地pg_xlog
-  MV_TO_DIR="$PGDATA/pg_xlog/before_degrade.`date +%F%T`"
-  mkdir -p $MV_TO_DIR
-  mv $PGDATA/pg_xlog/* $MV_TO_DIR
+  # 拷贝对端pg_root, 覆盖当前pg_root
+  rm -rf $PGDATA/*
+  cp -rP $PEER_ARCH_DIR/pg_root.s/* $PGDATA/
+  chmod -R 700 $PGDATA/*
 
   pg_ctl start -w -t 60000
   # 返回数据库是否启动成功
@@ -384,14 +379,6 @@ sudo $S_MOUNT -t nfs -o tcp $PEER_IP:$LOCAL_ARCH_DIR $PEER_ARCH_DIR
 echo "`date +%F%T` this is $LOCAL_ROLE"
 
 if [ $LOCAL_ROLE == "standby" ]; then
-  # -> copy 控制文件 -> 启动数据库
-  # 备份上一个旧控制文件
-  mv $LOCAL_ARCH_DIR/pg_control.s $LOCAL_ARCH_DIR/pg_control.s.`date +%F%T`
-  
-  # 备份当前控制文件
-  cp $PGDATA/global/pg_control $LOCAL_ARCH_DIR/pg_control.s
-  chmod 755 $LOCAL_ARCH_DIR/pg_control.s
-  
   # 判断数据库是否已启动
   port_probe $LOCAL_IP $PGPORT
   if [ $? -ne 0 ]; then
@@ -542,9 +529,9 @@ do
       echo "`date +%F%T` release vips."
       sudo $S_IFDOWN $VIPS_IF
 
-      # 等待120秒, 转换为master
+      # 等待对方完成degrade, 300秒, 转换为master
       echo "`date +%F%T` sleeping 120 second."
-      sleep 120
+      sleep 300
       # 转变角色
       LOCAL_ROLE="master"
     fi
