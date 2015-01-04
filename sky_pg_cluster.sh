@@ -207,8 +207,9 @@ degrade() {
   mv $PGDATA/recovery.done $PGDATA/recovery.conf
   
   # 清除本地pg_xlog
-  mkdir -p $PGDATA/pg_xlog/before_degrade
-  mv $PGDATA/pg_xlog/* $PGDATA/pg_xlog/before_degrade/
+  MV_TO_DIR="$PGDATA/pg_xlog/before_degrade.`date +%F%T`"
+  mkdir -p $MV_TO_DIR
+  mv $PGDATA/pg_xlog/* $MV_TO_DIR
 
   pg_ctl start -w -t 60000
   # 返回数据库是否启动成功
@@ -530,9 +531,9 @@ do
       echo "`date +%F%T` vips not up."
     fi
 
-    # 检测对端IP数据库监听是否已启动, 如果已启动, 释放vips
-    echo "`date +%F%T` detecting postgresql listener on peer host."
-    port_probe $PEER_IP $PGPORT
+    # 检测对端IP数据库心跳是否已健康, 如果健康, 释放vips
+    echo "`date +%F%T` detecting peer postgresql keepalive."
+    keepalive $PEER_IP
     if [ $? -eq 0 ]; then
       # 释放vips
       echo "`date +%F%T` release vips."
