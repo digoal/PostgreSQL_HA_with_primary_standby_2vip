@@ -146,13 +146,13 @@ fence() {
 
 # 将备数据库激活为主库
 promote() {
-  # 停库
-  pg_ctl stop -m fast -w -t 60000
-  
   # 备份standby控制文件
   mv $LOCAL_ARCH_DIR/pg_control.s $LOCAL_ARCH_DIR/pg_control.s.`date +%F%T`
   cp $PGDATA/global/pg_control $LOCAL_ARCH_DIR/pg_control.s
   chmod 755 $LOCAL_ARCH_DIR/pg_control.s
+  
+  # 停库
+  pg_ctl stop -m fast -w -t 60000
   
   # 修改recovery.conf, 注释restore_command
   sed -i -e 's/^restore_command/#digoal_restore_command/' $PGDATA/recovery.conf
@@ -583,6 +583,8 @@ do
     enable_promote 600 16000000
     if [ $? -ne 0 ]; then
       echo "`date +%F%T` can not promote."
+      # 可能是对端正在等待造成, 主动发起心跳, 不管结果
+      keepalive $VIPM_IP
       continue
     fi
     
