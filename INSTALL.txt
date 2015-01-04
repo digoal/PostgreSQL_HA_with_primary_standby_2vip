@@ -291,12 +291,14 @@ primary_conninfo = 'host=192.168.111.130 port=1921 user=replica keepalives_idle=
 
 配置密码文件 : (HOST1, HOST2)
 流复制1条, 连接到VIPM
-心跳3条, 连接到VIPM, VIPS, LOCAL
+心跳5条, 连接到VIPM, VIPS, LOCAL, PEER_IP
 # su - postgres
 $ vi ~/.pgpass
 192.168.111.130:1921:replication:replica:REPLICA321
 192.168.111.130:1921:sky_pg_cluster:sky_pg_cluster:SKY_PG_cluster_321
 192.168.111.131:1921:sky_pg_cluster:sky_pg_cluster:SKY_PG_cluster_321
+192.168.111.37:1921:sky_pg_cluster:sky_pg_cluster:SKY_PG_cluster_321
+192.168.111.42:1921:sky_pg_cluster:sky_pg_cluster:SKY_PG_cluster_321
 127.0.0.1:1921:sky_pg_cluster:sky_pg_cluster:SKY_PG_cluster_321
 $ chmod 400 .pgpass
 
