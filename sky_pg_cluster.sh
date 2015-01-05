@@ -15,6 +15,14 @@ export PATH=$PGHOME/bin:/bin:/sbin:$PATH:.
 export PGDATA=/opt/pg_root
 
 # 配置, node1,node2 可能不一致, 
+# 配置本节点是否允许为master, 
+# 可用于主备主机硬件相差悬殊的场景.固定一台主机为主节点, (即另一台主机m_s后, 发现对端正常了, 主动让位)
+# true表示本地可以为主节点, 如果两台主机都可以为主, 那都配置为true
+# 如果有一台不能为主, 就把那台配置为false
+# 注意必须保证有一台是true的.
+CAN_MASTER="true"
+
+# 配置, node1,node2 可能不一致, 
 # 并且需配置.pgpass存储VIPM, VIPS, LOCAL 心跳用户 密码校验信息.
 # 存储VIPM 流复制用户 密码校验信息
 # 网关IP, 用于arping检测本地网络是否正常, 如果没有网关, 使用一个广播域内的第三方IP也可行.
@@ -629,6 +637,27 @@ do
         # fence不成功, 可能是fence设备网络异常或fence配置有问题, 则继续探测, 不转换角色.
         echo "`date +%F%T` fence standby failed."
         continue
+      fi
+    else
+      # 判断本地CAN_MASTER, 这个将来可以放到数据库里面去配置
+      # 如果CAN_MASTER 不是true, 检查enable_promote, 释放VIPM, 等对方切换为m_s
+      # 释放vipm, 并退出程序
+      if [ $CAN_MASTER == "true" ]; then 
+        continue
+      else
+        echo "`date +%F%T` this node can not master, will shutdown and wait peer fence it and restart change to slave."
+        # 心跳,
+        keepalive $LOCAL_IP
+        # 检查slave是否允许激活, 如果允许激活, 停库, 停VIPM, 等对方切换为m_s, 退出脚本
+        enable_promote 60 8192000
+        if [ $? -eq 0 ]; then
+          pg_ctl stop -m fast -w -t 6000000
+          sudo $S_IFDOWN $VIPM_IF
+          exit 1
+        else 
+          echo "`date +%F%T` this node can not master, but peer too lag, so continue..."
+          continue
+        fi
       fi
     fi
   fi
