@@ -18,6 +18,14 @@ A HA script for PostgreSQL with 2 HOST (one for primary, one for standby), Prima
   应用程序连接虚拟IP, 其中一个虚拟IP对应的是primary, 另一个虚拟IP对应的是standby. 
   
   虚拟IP和角色的关系固定, 不会变化, 例如192.168.111.130对应primary角色, 那么不管怎么切换, 他们始终在一起(谁是primary,谁就会启动192.168.111.130).
+  
+  部署视频参考:
+  
+  http://www.tudou.com/programs/view/bIbZ85SrsHM/
+  
+  http://www.tudou.com/programs/view/kdRPT6dSp_0/
+  
+  http://www.tudou.com/programs/view/I6bxk2u3xdY/
 
 =======================================
 
