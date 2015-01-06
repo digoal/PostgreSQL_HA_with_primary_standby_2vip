@@ -541,12 +541,16 @@ do
     echo "`date +%F%T` detecting peer postgresql keepalive."
     keepalive $PEER_IP
     if [ $? -eq 0 ]; then
-      # 释放vips
-      echo "`date +%F%T` release vips."
-      sudo $S_IFDOWN $VIPS_IF
+      # 判断延迟, 合理则释放vips
+      enable_promote 10 8192000
+      if [ $? -eq 0 ]; then
+        # 释放vips
+        echo "`date +%F%T` release vips."
+        sudo $S_IFDOWN $VIPS_IF
 
-      # 转变角色
-      LOCAL_ROLE="master"
+        # 转变角色
+        LOCAL_ROLE="master"
+      fi
     fi
   fi
 
