@@ -484,11 +484,11 @@ su - postgres -c "/usr/local/bin/sky_pg_cluster.sh start"
 
 启动HA(按步骤) : (HOST1, HOST2)
 1. HOST1 HOST2 同时执行 : 
-  su - postgres -c "/usr/local/bin/sky_pg_clusterd.sh stop"
+  su - postgres -c "/usr/local/bin/sky_pg_cluster.sh stop"
 2. HOST1 HOST2 同时执行 : 
-  su - postgres -c "/usr/local/bin/sky_pg_clusterd.sh start"
-3. 检查sky_pg_clusterd.sh是否正常启动
-  ps -ewf|grep sky_pg_clusterd.sh
+  su - postgres -c "/usr/local/bin/sky_pg_cluster.sh start"
+3. 检查sky_pg_cluster.sh是否正常启动
+  ps -ewf|grep sky_pg_cluster.sh
 
 配置nagios : (HOST1, HOST2)
 监控如下项 : 
@@ -499,10 +499,10 @@ VIPM IP+port
 VIPS IP+port
 
 2. 以下脚本的调用配置在 /usr/local/nagios/etc/nrpe.cfg
-sky_pg_clusterd是否存活  (/usr/local/nagios/libexec/check_sky_pg_clusterd_alive.sh)
+sky_pg_clusterd是否存活  (/usr/local/nagios/libexec/check_sky_pg_cluster_alive.sh)
 standby同步延时监控  (/usr/local/nagios/libexec/check_standby_lag.sh)
 vi /usr/local/nagios/etc/nrpe.cfg
-command[check_sky_pg_clusterd]=/usr/local/nagios/libexec/check_sky_pg_clusterd_alive.sh
+command[check_sky_pg_clusterd]=/usr/local/nagios/libexec/check_sky_pg_cluster_alive.sh
 command[check_standby_lag]=/usr/local/nagios/libexec/check_standby_lag.sh
 
 service xinetd restart
