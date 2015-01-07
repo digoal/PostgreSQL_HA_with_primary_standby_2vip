@@ -22,6 +22,17 @@ export PGDATA=/opt/pg_root
 # 注意必须保证有一台是true的.
 CAN_MASTER="true"
 
+# checkmaster和checkstandby里面的检查次数
+CHECK_TIMES=5
+
+# 时间秒, 字节数
+# m_s 判断standby延迟, 合理则释放vips
+PROMOTE_RELEASE_VIPS="10 8192000"
+# standby 自检, 注意这个延迟时间必须大于checkmaster的超时时间. 检查主备延迟, 判断是否适合激活数据库
+PROMOTE_STANDBY_SELF="35 8192000"
+# 检查standby是否允许激活, 如果允许激活, 释放VIPM, 等对方切换为m_s
+PROMOTE_CANNOT_MASTER="10 8192000"
+
 # 配置, node1,node2 可能不一致, 
 # 并且需配置.pgpass存储VIPM, VIPS, LOCAL 心跳用户 密码校验信息.
 # 存储VIPM 流复制用户 密码校验信息
@@ -542,7 +553,7 @@ do
     keepalive $PEER_IP
     if [ $? -eq 0 ]; then
       # 判断延迟, 合理则释放vips
-      enable_promote 10 8192000
+      enable_promote $PROMOTE_RELEASE_VIPS
       if [ $? -eq 0 ]; then
         # 释放vips
         echo "`date +%F%T` release vips."
@@ -587,7 +598,7 @@ do
     # 检查主备延迟, 判断是否适合激活数据库
     # 假设延迟判断, 100秒以及32MB
     # 注意这个延迟时间必须大于checkmaster的超时时间.
-    enable_promote 100 32000000
+    enable_promote $PROMOTE_STANDBY_SELF
     if [ $? -ne 0 ]; then
       echo "`date +%F%T` can not promote."
       # 可能是对端正在等待造成, 主动发起心跳, 不管结果
@@ -596,7 +607,7 @@ do
     fi
     
     # 异常超过5次, 触发切换, 角色转变
-    checkmaster 5
+    checkmaster $CHECK_TIMES
     if [ $? -ne 0 ]; then
       fence $FENCE_IP $FENCE_USER $FENCE_PWD force
       RET=$?
@@ -628,7 +639,7 @@ do
     fi
     
     # 异常超过5次, 触发切换, 角色转变
-    checkstandby 5
+    checkstandby $CHECK_TIMES
     if [ $? -ne 0 ]; then
       # 这里不使用强制fence
       fence $FENCE_IP $FENCE_USER $FENCE_PWD normal
@@ -653,7 +664,7 @@ do
         # 心跳,
         keepalive $LOCAL_IP
         # 检查slave是否允许激活, 如果允许激活, 停库, 停VIPM, 等对方切换为m_s, 退出脚本
-        enable_promote 60 8192000
+        enable_promote $PROMOTE_CANNOT_MASTER
         if [ $? -eq 0 ]; then
           pg_ctl stop -m fast -w -t 6000000
           sudo $S_IFDOWN $VIPM_IF
