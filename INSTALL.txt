@@ -211,6 +211,14 @@ chown postgres:postgres /opt/pg_root
 chown postgres:postgres /opt/arch
 chown postgres:postgres /opt/peer_arch
 
+注意:
+在$PGDATA中用到的软链接必须一致, 例如 以下是不行的, 会导致数据库rsync后异常.
+主机A /opt/pg_root/pg_xlog -> /pg_xlog
+主机B /opt/pg_root/pg_xlog -> /data01/pg_xlog
+主机A /opt/pg_root/pg_tblspc/12345 -> /pg_tbs1
+主机B /opt/pg_root/pg_tblspc/12345 -> /data01/pg_tbs1
+
+
 配置 NFS : (HOST1, HOST2)
 # vi /etc/exports 
 /opt/arch       192.168.111.37/24(ro,no_root_squash,sync)
