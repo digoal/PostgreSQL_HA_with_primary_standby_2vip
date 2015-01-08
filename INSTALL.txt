@@ -240,12 +240,17 @@ initdb -D $PGDATA -E UTF8 --locale=C -U postgres -W
 配置流复制 : (HOST1)
 
 配置 流复制HBA, 心跳HBA : 
+务必同时配置虚拟IP的连接心跳, 除非固定出口IP.
 cd $PGDATA
 vi pg_hba.conf
 host    replication     replica        192.168.111.37/32                md5 
 host    replication     replica        192.168.111.42/32                md5 
+host    replication     replica        192.168.111.130/32                md5 
+host    replication     replica        192.168.111.131/32                md5 
 host    sky_pg_cluster     sky_pg_cluster        192.168.111.37/32                md5 
 host    sky_pg_cluster     sky_pg_cluster        192.168.111.42/32                md5 
+host    sky_pg_cluster     sky_pg_cluster        192.168.111.130/32                md5 
+host    sky_pg_cluster     sky_pg_cluster        192.168.111.131/32                md5 
 host    sky_pg_cluster     sky_pg_cluster        127.0.0.1/32                     md5
 # 其他
 host all all 0.0.0.0/0 md5
