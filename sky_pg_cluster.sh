@@ -223,6 +223,7 @@ degrade() {
     if [ $? -eq 0 ]; then
       # 开始rsync
       rsync -a --delete --delete-before $PEER_IP:$PGDATA/ $PGDATA/
+      rsync -a --delete --delete-before $PEER_IP:$PGDATA/pg_xlog/ $PGDATA/pg_xlog/
       chown -R postgres:postgres $PGDATA
       chmod -R 700 $PGDATA
       for file in `ls $PGDATA/pg_tblspc`
