@@ -68,6 +68,9 @@ NAGIOS_LOG="/tmp/sky_pg_clusterd.log"
 # 脚本名, 用于停止脚本, 必须与脚本名一致
 SUB_NAME="$(basename $BASH_SOURCE)"
 
+# 取消alias, 防止异常
+unalias ifup ifdown arping mount umount
+
 # sudo 命令绝对路径
 S_IFUP="`which ifup`"
 S_IFDOWN="`which ifdown`"
