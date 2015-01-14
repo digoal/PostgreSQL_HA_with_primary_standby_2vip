@@ -27,11 +27,11 @@ CHECK_TIMES=5
 
 # 时间秒, 字节数
 # m_s 判断standby延迟, 合理则释放vips
-PROMOTE_RELEASE_VIPS="10 8192000"
+PROMOTE_RELEASE_VIPS="400 80192000"
 # standby 自检, 注意这个延迟时间必须大于checkmaster的超时时间. 检查主备延迟, 判断是否适合激活数据库
-PROMOTE_STANDBY_SELF="35 8192000"
+PROMOTE_STANDBY_SELF="600 160192000"
 # 检查standby是否允许激活, 如果允许激活, 释放VIPM, 等对方切换为m_s
-PROMOTE_CANNOT_MASTER="10 8192000"
+PROMOTE_CANNOT_MASTER="400 80192000"
 
 # 配置, node1,node2 可能不一致, 
 # 并且需配置.pgpass存储VIPM, VIPS, LOCAL 心跳用户 密码校验信息.
