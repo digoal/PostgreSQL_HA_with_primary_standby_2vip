@@ -605,8 +605,6 @@ do
     enable_promote $PROMOTE_STANDBY_SELF
     if [ $? -ne 0 ]; then
       echo "`date +%F%T` can not promote."
-      # 可能是对端正在等待造成, 主动发起心跳, 不管结果
-      keepalive $VIPM_IP
       continue
     fi
     
