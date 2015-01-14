@@ -394,6 +394,7 @@ fi
 
 # 加载peer归档文件
 # 如果对端节点未启动, 会卡在这里
+# 共享存储不需要配置这个
 sudo $S_MOUNT -t nfs -o tcp $PEER_IP:$LOCAL_ARCH_DIR $PEER_ARCH_DIR
 
 echo "`date +%F%T` this is $LOCAL_ROLE"
