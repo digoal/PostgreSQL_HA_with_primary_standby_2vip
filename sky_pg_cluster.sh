@@ -69,7 +69,7 @@ NAGIOS_LOG="/tmp/sky_pg_clusterd.log"
 SUB_NAME="$(basename $BASH_SOURCE)"
 
 # 取消alias, 防止异常
-unalias ifup ifdown arping mount umount
+unalias ifup ifdown arping mount umount timeout
 
 # sudo 命令绝对路径
 S_IFUP="`which ifup`"
@@ -79,7 +79,7 @@ S_MOUNT="`which mount`"
 S_UMOUNT="`which umount`"
 
 # 依赖命令
-DEP_CMD="sudo ifup ifdown arping mount umount port_probe pg_ctl psql ipmitool rsync fence_ilo"
+DEP_CMD="sudo ifup ifdown arping mount umount port_probe pg_ctl psql ipmitool rsync fence_ilo timeout"
 
 # 9.0 使用触发器文件
 # TRIG_FILE='/data01/pgdata/pg_root/.1921.trigger'
@@ -279,13 +279,13 @@ keepalive() {
   
   # 写入心跳数据
   SQL="select cluster_keepalive_test('$PEER_IP');"
-  psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
+  timeout 10 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
   # 再给3次机会尝试, 例如数据库负载较高时可能返回异常
   if [ $? -ne 0 ]; then
     sleep 2
     for ((m=1;m<4;m++))
     do
-      psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
+      timeout 10 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
       if [ $? -eq 0 ]; then
         return 0
       else
