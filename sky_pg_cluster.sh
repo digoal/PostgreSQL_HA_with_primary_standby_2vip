@@ -285,7 +285,7 @@ keepalive() {
     sleep 2
     for ((m=1;m<4;m++))
     do
-      timeout 10 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
+      timeout 30 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
       if [ $? -eq 0 ]; then
         return 0
       else
