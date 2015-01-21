@@ -392,6 +392,7 @@ declare
   v_spcoid oid;
   v_nspname name := 'sky_pg_cluster';
   v_rep_lag int8;
+  v_t timestamp without time zone;
 begin
   if ( pg_is_in_recovery() ) then
       raise notice 'this is standby node.';
@@ -420,9 +421,9 @@ begin
       execute 'insert into '||v_nspname||'.t_'||v_spcname||' values ('''||now()||''')';
       perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
     else
-      execute 'update '||v_nspname||'.t_'||v_spcname||' set crt_time='||''''||now()||''' where now()-crt_time> interval ''1 min'' ';
-      if found then
-        perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
+      execute 'update '||v_nspname||'.t_'||v_spcname||' set crt_time='||''''||now()||''' where now()-crt_time> interval ''1 min'' returning crt_time' into v_t;
+      if v_t is not null then
+	perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
       end if;
     end if;
   END LOOP;
