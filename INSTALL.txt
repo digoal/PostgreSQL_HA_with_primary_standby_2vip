@@ -405,13 +405,12 @@ begin
     -- standby 未启动
     update cluster_status set last_alive=now();
   end if;
+  -- 表空间相关心跳检测1分钟一次, 减轻更新压力
   FOR v_spcname,v_spcoid IN 
-    select spcname,oid from pg_tablespace where 
-      oid <> (select dattablespace from pg_database where datname=current_database())
-      and spcname <> 'pg_global' 
+    select spcname,oid from pg_tablespace where spcname <> 'pg_global' 
   LOOP
     perform 1 from pg_class where 
-      reltablespace=v_spcoid 
+      ( reltablespace=v_spcoid or reltablespace=0 )
       and relname='t_'||v_spcname 
       and relkind='r' 
       and relnamespace=(select oid from pg_namespace where nspname=v_nspname)
@@ -419,26 +418,14 @@ begin
     if not found then
       execute 'create table '||v_nspname||'.t_'||v_spcname||' (crt_time timestamp) tablespace '||v_spcname;
       execute 'insert into '||v_nspname||'.t_'||v_spcname||' values ('''||now()||''')';
+      perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
     else
-      execute 'update '||v_nspname||'.t_'||v_spcname||' set crt_time='||''''||now()||'''';
+      execute 'update '||v_nspname||'.t_'||v_spcname||' set crt_time='||''''||now()||''' where now()-crt_time> interval ''1 min'' ';
+      if found then
+        perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
+      end if;
     end if;
-    perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
   END LOOP;
-  select spcname into v_spcname from pg_tablespace where 
-    oid = (select dattablespace from pg_database where datname=current_database());
-  perform 1 from pg_class where 
-    reltablespace=0 
-    and relname='t_'||v_spcname 
-    and relkind='r' 
-    and relnamespace=(select oid from pg_namespace where nspname=v_nspname)
-    limit 1;
-  if not found then
-    execute 'create table '||v_nspname||'.t_'||v_spcname||' (crt_time timestamp) tablespace '||v_spcname;
-    execute 'insert into '||v_nspname||'.t_'||v_spcname||' values ('''||now()||''')';
-  else
-    execute 'update '||v_nspname||'.t_'||v_spcname||' set crt_time='||''''||now()||'''';
-  end if;
-  perform pg_stat_file(pg_relation_filepath(v_nspname||'.t_'||v_spcname));
 end;
 $$ language plpgsql strict;
 -- 在创建测试函数后, 最好测试一下是否正常, 因为某些版本的系统表可能不通用, 需要调整.
