@@ -548,14 +548,17 @@ do
       echo "`date +%F%T` can not connect to gateway."
     fi
 
-    # 本地心跳检查, 反映本地数据库健康状态, 不健康则退出本脚本
+    # 本地心跳检查, 反映本地数据库健康状态, 不健康则检查对端心跳, 退出本脚本
     keepalive $LOCAL_IP
     if [ $? -ne 0 ]; then
-      echo "`date +%F%T` local database not health, release vipm and vips. exit this script."
-      # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方升级为primary
-      sudo $S_IFDOWN $VIPM_IF
-      sudo $S_IFDOWN $VIPS_IF
-      exit 1
+      keepalive $PEER_IP
+      if [ $? -eq 0 ]; then
+        echo "`date +%F%T` local database not health, release vipm and vips. exit this script."
+        # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方升级为primary
+        sudo $S_IFDOWN $VIPM_IF
+        sudo $S_IFDOWN $VIPS_IF
+        exit 1
+      fi
     fi
 
     # 本地角色对应IP检查, 不影响释放vips, 只做日志输出
@@ -596,14 +599,17 @@ do
     continue
   fi
 
-  # 本地心跳检查, 反映本地数据库健康状态, 不健康则退出本脚本.
+  # 本地心跳检查, 反映本地数据库健康状态, 不健康则检查对端, 退出本脚本.
   keepalive $LOCAL_IP
   if [ $? -ne 0 ]; then
-    echo "`date +%F%T` local database not health."
-    # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方处理, 例如升级为primary或m_s
-    sudo $S_IFDOWN $VIPM_IF
-    sudo $S_IFDOWN $VIPS_IF
-    exit 1
+    keepalive $PEER_IP
+    if [ $? -eq 0 ]; then
+      echo "`date +%F%T` local database not health."
+      # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方处理, 例如升级为primary或m_s
+      sudo $S_IFDOWN $VIPM_IF
+      sudo $S_IFDOWN $VIPS_IF
+      exit 1
+    fi
   fi
 
   if [ $LOCAL_ROLE == "standby" ]; then
