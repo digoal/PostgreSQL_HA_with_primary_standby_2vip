@@ -279,7 +279,7 @@ keepalive() {
   
   # 写入心跳数据
   SQL="select cluster_keepalive_test('$PEER_IP');"
-  timeout 2400 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
+  timeout 60 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
   # 再给3次机会尝试, 例如数据库负载较高时可能返回异常
   if [ $? -ne 0 ]; then
     sleep 2
