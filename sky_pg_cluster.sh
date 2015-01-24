@@ -225,13 +225,13 @@ degrade() {
     psql -h $VIPM_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_start_backup(now()::text)"
     if [ $? -eq 0 ]; then
       # 开始rsync
-      rsync -a --delete --delete-before $PEER_IP:$PGDATA/ $PGDATA/
-      rsync -a --delete --delete-before $PEER_IP:$PGDATA/pg_xlog/ $PGDATA/pg_xlog/
+      rsync -a --bwlimit=80000 --delete --delete-before $PEER_IP:$PGDATA/ $PGDATA/
+      rsync -a --bwlimit=80000 --delete --delete-before $PEER_IP:$PGDATA/pg_xlog/ $PGDATA/pg_xlog/
       chown -R postgres:postgres $PGDATA
       chmod -R 700 $PGDATA
       for file in `ls $PGDATA/pg_tblspc`
       do
-        rsync -a --delete --delete-before $PEER_IP:$PGDATA/pg_tblspc/$file/ $PGDATA/pg_tblspc/$file/
+        rsync -a --bwlimit=80000 --delete --delete-before $PEER_IP:$PGDATA/pg_tblspc/$file/ $PGDATA/pg_tblspc/$file/
 	chown -R postgres:postgres $PGDATA/pg_tblspc/$file/*
 	chmod -R 700 $PGDATA/pg_tblspc/$file/*
       done
@@ -279,13 +279,13 @@ keepalive() {
   
   # 写入心跳数据
   SQL="select cluster_keepalive_test('$PEER_IP');"
-  timeout 600 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
+  timeout 2400 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
   # 再给3次机会尝试, 例如数据库负载较高时可能返回异常
   if [ $? -ne 0 ]; then
     sleep 2
     for ((m=1;m<4;m++))
     do
-      timeout 600 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
+      timeout 2400 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
       if [ $? -eq 0 ]; then
         return 0
       else
