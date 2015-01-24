@@ -218,6 +218,19 @@ degrade() {
   echo "`date +%F%T` degrading database ..."
   pg_ctl stop -m fast -w -t 60000
   
+  # 等到凌晨开始同步, 请改成您所在系统的低谷再开始
+  for ((i=1;i>0;i=1))
+  do
+    HOU="`date +%H`"
+    if [ $HOU == "00" ]; then
+      echo $HOU
+      echo "ok, then start rsync."
+      break
+    fi
+    echo "waiting to 00:00 then start rsync."
+    sleep 10
+  done
+  
   # 备份数据库pg_root
   for ((m=1;m>0;m++))
   do
