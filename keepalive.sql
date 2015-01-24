@@ -49,6 +49,10 @@ begin
     -- standby 未启动
     update cluster_status set last_alive=now();
   end if;
+
+  -- 临时禁止检测表空间, return
+  return;
+
   -- 表空间相关心跳检测1分钟一次, 减轻更新压力
   FOR v_spcname,v_spcoid IN 
     select spcname,oid from pg_tablespace where spcname <> 'pg_global' 
