@@ -296,13 +296,13 @@ keepalive() {
   # 再给3次机会尝试, 例如数据库负载较高时可能返回异常
   if [ $? -ne 0 ]; then
     sleep 2
-    for ((m=1;m<4;m++))
+    for ((m=1;m<30;m++))
     do
       timeout 2400 psql -h $DEST_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "$SQL"
       if [ $? -eq 0 ]; then
         return 0
       else
-        sleep 2
+        sleep 10
       fi
     done
     return 1
