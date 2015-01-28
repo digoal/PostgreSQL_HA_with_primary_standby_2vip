@@ -22,6 +22,11 @@ export PGDATA=/opt/pg_root
 # 注意必须保证有一台是true的.
 CAN_MASTER="true"
 
+# 配置是否等待到低峰开始degrade的同步
+RSYNC_WAIT="true"
+# 等待到时间点格式 date +%H
+RSYNC_UNTIL="00"
+
 # checkmaster和checkstandby里面的检查次数
 CHECK_TIMES=5
 
@@ -219,17 +224,19 @@ degrade() {
   pg_ctl stop -m fast -w -t 60000
   
   # 等到凌晨开始同步, 请改成您所在系统的低谷再开始
-  for ((i=1;i>0;i=1))
-  do
-    HOU="`date +%H`"
-    if [ $HOU == "00" ]; then
-      echo $HOU
-      echo "ok, then start rsync."
-      break
-    fi
-    echo "waiting to 00:00 then start rsync."
-    sleep 10
-  done
+  if [ $RSYNC_WAIT == "true" ]; then
+    for ((i=1;i>0;i=1))
+    do
+      HOU="`date +%H`"
+      if [ $HOU == $RSYNC_UNTIL ]; then
+        echo $HOU
+        echo "ok, then start rsync."
+        break
+      fi
+      echo "waiting to HOUR: $RSYNC_UNTIL , then start rsync."
+      sleep 10
+    done
+  fi
   
   # 从主节点同步数据库pg_root
   # 注意必须遵循结构: $PGDATA中只有pg_xlog可以为软链接, 表空间目录中的表空间可以为软链接.
