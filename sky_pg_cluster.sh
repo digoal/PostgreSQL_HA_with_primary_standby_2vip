@@ -231,13 +231,17 @@ degrade() {
     sleep 10
   done
   
-  # 备份数据库pg_root
+  # 从主节点同步数据库pg_root
+  # 注意必须遵循结构: $PGDATA中只有pg_xlog可以为软链接, 表空间目录中的表空间可以为软链接.
+  # 其他不能是软链接.
+  # 不是很严谨, 以后修改
   for ((m=1;m>0;m++))
   do
     # 开启pg_start_backup
     psql -h $VIPM_IP -p $PGPORT -U $PGUSER -d $PGDBNAME -c "select pg_start_backup(now()::text)"
     if [ $? -eq 0 ]; then
       # 开始rsync
+      # 如果可以的话, 建议在同步$PGDATA目录时, 尝试排除pg_xlog目录的同步(假设pg_xlog不是软链接的情况)
       rsync -a --bwlimit=80000 --delete --delete-before $PEER_IP:$PGDATA/ $PGDATA/
       rsync -a --bwlimit=80000 --delete --delete-before $PEER_IP:$PGDATA/pg_xlog/ $PGDATA/pg_xlog/
       chown -R postgres:postgres $PGDATA
