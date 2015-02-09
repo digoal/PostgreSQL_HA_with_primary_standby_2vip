@@ -579,8 +579,10 @@ do
       if [ $? -eq 0 ]; then
         echo "`date +%F%T` local database not health, release vipm and vips. exit this script."
         # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方升级为primary
-        sudo $S_IFDOWN $VIPM_IF
-        sudo $S_IFDOWN $VIPS_IF
+        # 不建议关网卡, 为什么呢? 从经验来看, 造成心跳失败的原因很多, 例如连接数满了, 响应超时, 
+        # 这些原因不足以构成数据库异常, 所以不建议这里停网卡, 停脚本, 通过nagios来监控脚本异常再来排查问题.
+        # sudo $S_IFDOWN $VIPM_IF
+        # sudo $S_IFDOWN $VIPS_IF
         exit 1
       fi
     fi
@@ -630,8 +632,9 @@ do
     if [ $? -eq 0 ]; then
       echo "`date +%F%T` local database not health."
       # 如果本地数据库不健康, 释放VIPM, VIPS, 等待对方处理, 例如升级为primary或m_s
-      sudo $S_IFDOWN $VIPM_IF
-      sudo $S_IFDOWN $VIPS_IF
+      # 不建议停网卡, 原因同m_s章节
+      # sudo $S_IFDOWN $VIPM_IF
+      # sudo $S_IFDOWN $VIPS_IF
       exit 1
     fi
   fi
