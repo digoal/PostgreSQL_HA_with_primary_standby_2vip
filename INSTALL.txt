@@ -67,6 +67,17 @@ net.ipv4.netfilter.ip_conntrack_max = 655360
 fs.aio-max-nr = 1048576
 net.ipv4.tcp_timestamps = 0
 vm.overcommit_memory = 0
+net.ipv4.tcp_tw_recycle=1
+net.ipv4.tcp_timestamps=1
+net.ipv4.tcp_keepalive_time = 72 
+net.ipv4.tcp_keepalive_probes = 9 
+net.ipv4.tcp_keepalive_intvl = 7
+vm.zone_reclaim_mode=1
+vm.dirty_background_bytes=102400000
+vm.dirty_bytes=102400000
+vm.dirty_expire_centisecs=10
+vm.dirty_writeback_centisecs=10
+vm.swappiness=0
 
 # sysctl -p
 
