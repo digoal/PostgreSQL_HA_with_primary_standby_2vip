@@ -70,7 +70,7 @@ int main(int argc,char *argv[])
     error("setsockopt SO_RCVTIMEO error!", -1);
   }
   if (setsockopt(cfd, SOL_SOCKET, SO_LINGER, (void *) &so_linger, sizeof(so_linger)) < 0) {
-    error("setsockopt error!", -1);
+    error("setsockopt SO_LINGER error!", -1);
   }
 
   if(-1 == connect(cfd, (struct sockaddr *)(&s_add), sizeof(struct sockaddr))) {
