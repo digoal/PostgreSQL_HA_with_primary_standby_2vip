@@ -1,11 +1,11 @@
-/*
-# 用于探测仲裁服务器上的vip端口代理.
-# install: 
-# gcc -O3 -Wall -Wextra -Werror -g -o port_probe ./port_probe.c
-
-# Author : Digoal zhou
-# Email : digoal@126.com
-# Blog : http://blog.163.com/digoal@126/
+/*                                                                                                                                  
+# 用于探测仲裁服务器上的vip端口代理.                                                                                                
+# install:                                                                                                                          
+# gcc -O3 -Wall -Wextra -Werror -g -o port_probe ./port_probe.c                                                                     
+                                                                                                                                    
+# Author : Digoal zhou                                                                                                              
+# Email : digoal@126.com                                                                                                            
+# Blog : http://blog.163.com/digoal@126/                                                                                            
 */
 
 
@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/time.h>
+
 
 // 错误函数, 当exit_val=0只输出错误信息, 不退出程序. 其他值输出错误信息并退出程序
 void error(char * msg, int exit_val);
@@ -52,10 +53,23 @@ int main(int argc,char *argv[])
   struct timeval tv_timeout;
   tv_timeout.tv_sec = 2;
   tv_timeout.tv_usec = 0;
+
+  // 避免本地出现TIME_WAIT
+  struct linger {
+     int l_onoff; /* 0 = off, nozero = on */
+     int l_linger; /* linger time */
+  };
+  struct linger so_linger;
+  so_linger.l_onoff = 1;
+  so_linger.l_linger = 0;
+
   if (setsockopt(cfd, SOL_SOCKET, SO_SNDTIMEO, (void *) &tv_timeout, sizeof(struct timeval)) < 0) {
-    error("setsockopt error!", -1);
+    error("setsockopt SO_SNDTIMEO error!", -1);
   }
   if (setsockopt(cfd, SOL_SOCKET, SO_RCVTIMEO, (void *) &tv_timeout, sizeof(struct timeval)) < 0) {
+    error("setsockopt SO_RCVTIMEO error!", -1);
+  }
+  if (setsockopt(cfd, SOL_SOCKET, SO_LINGER, (void *) &so_linger, sizeof(so_linger)) < 0) {
     error("setsockopt error!", -1);
   }
 
