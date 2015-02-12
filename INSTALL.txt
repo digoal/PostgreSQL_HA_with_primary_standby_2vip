@@ -21,6 +21,7 @@ OS配置(HOST1, HOST2) :
 chkconfig acpid off
 
 增加yum源, 安装需要的包. (HOST1, HOST2)
+视OS版本环境配置, 可能与以下不一致
 /etc/yum.repos.d/rhel-sky.repo
 [Cluster]
 name=Cluster Directory
@@ -139,9 +140,9 @@ NETMASK=255.255.255.0
 允许node1,node2 相互访问PostgreSQL监听端口, 
 vi /etc/sysconfig/iptables
 # 私有网段
--A RH-Firewall-1-INPUT -s 192.168.0.0/16 -j ACCEPT
--A RH-Firewall-1-INPUT -s 10.0.0.0/8 -j ACCEPT
--A RH-Firewall-1-INPUT -s 172.16.0.0/16 -j ACCEPT
+-A INPUT -s 192.168.0.0/16 -j ACCEPT
+-A INPUT -s 10.0.0.0/8 -j ACCEPT
+-A INPUT -s 172.16.0.0/16 -j ACCEPT
 
 编译port_probe : (HOST1, HOST2):
 gcc -O3 -Wall -Wextra -Werror -g -o port_probe ./port_probe.c
