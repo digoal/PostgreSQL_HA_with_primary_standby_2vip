@@ -232,8 +232,8 @@ chown postgres:postgres /opt/peer_arch
 
 配置 NFS : (HOST1, HOST2)
 # vi /etc/exports 
-/opt/arch       192.168.111.37/24(ro,no_root_squash,sync)
-/opt/arch       192.168.111.42/24(ro,no_root_squash,sync)
+/opt/arch       192.168.111.37/32(ro,no_root_squash,sync)
+/opt/arch       192.168.111.42/32(ro,no_root_squash,sync)
 # service nfs start
 # chkconfig nfs on
 
