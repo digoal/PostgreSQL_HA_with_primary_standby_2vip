@@ -243,6 +243,14 @@ mount -t nfs -o tcp 192.168.111.42:/opt/arch /opt/peer_arch
 on HOST2:
 mount -t nfs -o tcp 192.168.111.37:/opt/arch /opt/peer_arch
 
+添加到/etc/rc.local
+HOST1
+vi /etc/rc.local
+/bin/mount -t nfs -o tcp 192.168.111.42:/opt/arch /opt/peer_arch
+HOST2
+/bin/mount -t nfs -o tcp 192.168.111.37:/opt/arch /opt/peer_arch
+
+
 
 初始化数据库
 su - postgres
@@ -501,6 +509,14 @@ su - postgres -c "/usr/local/bin/sky_pg_cluster.sh start"
 启动HA(按步骤) : (HOST1, HOST2)
 1. HOST1 HOST2 同时执行 : 
   su - postgres -c "/usr/local/bin/sky_pg_cluster.sh stop"
+初次启动前, 手工先启动VIP和postgresql. 然后再启动以下脚本.
+HOST1, primary
+ifup eth0:1
+pg_ctl start
+
+HOST2, standby
+ifup eth0:2
+pg_ctl start
 2. HOST1 HOST2 同时执行 : 
   su - postgres -c "/usr/local/bin/sky_pg_cluster.sh start"
 3. 检查sky_pg_cluster.sh是否正常启动
