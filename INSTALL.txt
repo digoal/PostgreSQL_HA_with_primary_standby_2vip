@@ -509,7 +509,8 @@ su - postgres -c "/usr/local/bin/sky_pg_cluster.sh start"
 启动HA(按步骤) : (HOST1, HOST2)
 1. HOST1 HOST2 同时执行 : 
   su - postgres -c "/usr/local/bin/sky_pg_cluster.sh stop"
-初次启动前, 手工先启动VIP和postgresql. 然后再启动以下脚本.
+
+为了测试方便, 初次启动前, 可以手工先启动VIP和postgresql. 然后再启动以下脚本.
 HOST1, primary
 ifup eth0:1
 pg_ctl start
@@ -517,6 +518,8 @@ pg_ctl start
 HOST2, standby
 ifup eth0:2
 pg_ctl start
+实际生产时, 可以不用以上步骤, 只是启动时间可能较长, 因为要执行keepalived
+
 2. HOST1 HOST2 同时执行 : 
   su - postgres -c "/usr/local/bin/sky_pg_cluster.sh start"
 3. 检查sky_pg_cluster.sh是否正常启动
