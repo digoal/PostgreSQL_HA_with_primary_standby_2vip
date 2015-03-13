@@ -313,6 +313,7 @@ keepalive() {
       if [ $? -eq 0 ]; then
         return 0
       else
+        echo "keepalive falied times : $m"
         sleep 10
       fi
     done
