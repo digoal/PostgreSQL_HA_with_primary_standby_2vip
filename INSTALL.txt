@@ -78,7 +78,7 @@ vm.dirty_ratio = 80
 vm.dirty_expire_centisecs = 6000
 vm.dirty_writeback_centisecs = 50
 vm.swappiness=0
-vm.overcommit_memory = 2
+vm.overcommit_memory = 0
 vm.overcommit_ratio = 90
 
 
